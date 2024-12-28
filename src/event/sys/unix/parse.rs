@@ -2,7 +2,7 @@ use std::io;
 
 use crate::event::{
     Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers, KeyboardEnhancementFlags,
-    MediaKeyCode, ModifierKeyCode, MouseButton, MouseEvent, MouseEventKind,
+    MediaKeyCode, ModifierKeyCode, MouseButton, MouseEvent, MouseEventKind, ThemeMode,
 };
 
 use super::super::super::InternalEvent;
@@ -180,6 +180,7 @@ pub(crate) fn parse_csi(buffer: &[u8]) -> io::Result<Option<InternalEvent>> {
         b'?' => match buffer[buffer.len() - 1] {
             b'u' => return parse_csi_keyboard_enhancement_flags(buffer),
             b'c' => return parse_csi_primary_device_attributes(buffer),
+            b'n' => return parse_csi_theme_mode(buffer),
             _ => None,
         },
         b'0'..=b'9' => {
@@ -298,6 +299,32 @@ fn parse_csi_primary_device_attributes(buffer: &[u8]) -> io::Result<Option<Inter
     // See <https://vt100.net/docs/vt510-rm/DA1.html>
 
     Ok(Some(InternalEvent::PrimaryDeviceAttributes))
+}
+
+fn parse_csi_theme_mode(buffer: &[u8]) -> io::Result<Option<InternalEvent>> {
+    // dark mode:  CSI ? 997 ; 1 n
+    // light mode: CSI ? 997 ; 2 n
+    assert!(buffer.starts_with(b"\x1B[?"));
+    assert!(buffer.ends_with(b"n"));
+
+    let s = std::str::from_utf8(&buffer[3..buffer.len() - 1])
+        .map_err(|_| could_not_parse_event_error())?;
+
+    let mut split = s.split(';');
+
+    if next_parsed::<u16>(&mut split)? != 997 {
+        return Ok(None);
+    }
+
+    let theme_mode = match next_parsed::<u8>(&mut split)? {
+        1 => ThemeMode::Dark,
+        2 => ThemeMode::Light,
+        _ => return Ok(None),
+    };
+
+    Ok(Some(InternalEvent::Event(Event::ThemeModeChanged(
+        theme_mode,
+    ))))
 }
 
 fn parse_modifiers(mask: u8) -> KeyModifiers {

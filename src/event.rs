@@ -54,6 +54,7 @@
 //!             #[cfg(feature = "bracketed-paste")]
 //!             Event::Paste(data) => println!("{:?}", data),
 //!             Event::Resize(width, height) => println!("New size {}x{}", width, height),
+//!             Event::ThemeModeChanged(mode) => println!("New theme mode {:?}", mode),
 //!         }
 //!     }
 //!     execute!(
@@ -100,6 +101,7 @@
 //!                 #[cfg(feature = "bracketed-paste")]
 //!                 Event::Paste(data) => println!("Pasted {:?}", data),
 //!                 Event::Resize(width, height) => println!("New size {}x{}", width, height),
+//!                 Event::ThemeModeChanged(mode) => println!("New theme mode {:?}", mode),
 //!             }
 //!         } else {
 //!             // Timeout expired and no `Event` is available
@@ -542,6 +544,60 @@ impl Command for PopKeyboardEnhancementFlags {
     }
 }
 
+/// A command which subscribes to updates of the terminal's selected theme mode (dark/light).
+///
+/// See [`ThemeMode`] for more information.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EnableThemeModeUpdates;
+
+impl Command for EnableThemeModeUpdates {
+    fn write_ansi(&self, f: &mut impl fmt::Write) -> fmt::Result {
+        f.write_str(csi!("?2031h"))
+    }
+
+    #[cfg(windows)]
+    fn execute_winapi(&self) -> std::io::Result<()> {
+        use std::io;
+
+        Err(io::Error::new(
+            io::ErrorKind::Unsupported,
+            "Theme mode updates are not implemented for the legacy Windows API",
+        ))
+    }
+
+    #[cfg(windows)]
+    fn is_ansi_code_supported(&self) -> bool {
+        false
+    }
+}
+
+/// A command which unsubscribes to updates of the terminal's selected theme mode (dark/light).
+///
+/// See [ThemeMode] and [EnableThemeModeUpdates] for more information.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DisableThemeModeUpdates;
+
+impl Command for DisableThemeModeUpdates {
+    fn write_ansi(&self, f: &mut impl fmt::Write) -> fmt::Result {
+        f.write_str(csi!("?2031l"))
+    }
+
+    #[cfg(windows)]
+    fn execute_winapi(&self) -> std::io::Result<()> {
+        use std::io;
+
+        Err(io::Error::new(
+            io::ErrorKind::Unsupported,
+            "Theme mode updates are not implemented for the legacy Windows API",
+        ))
+    }
+
+    #[cfg(windows)]
+    fn is_ansi_code_supported(&self) -> bool {
+        false
+    }
+}
+
 /// Represents an event.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "derive-more", derive(IsVariant))]
@@ -563,6 +619,7 @@ pub enum Event {
     /// An resize event with new dimensions after resize (columns, rows).
     /// **Note** that resize events can occur in batches.
     Resize(u16, u16),
+    ThemeModeChanged(ThemeMode),
 }
 
 impl Event {
@@ -1484,6 +1541,19 @@ pub(crate) enum InternalEvent {
     /// Attributes and architectural class of the terminal.
     #[cfg(unix)]
     PrimaryDeviceAttributes,
+}
+
+/// The selected color scheme of the terminal.
+///
+/// This information can be queried from terminals implementing Contour's [VT extension for theme
+/// mode updates](https://github.com/contour-terminal/contour/blob/master/docs/vt-extensions/color-palette-update-notifications.md).
+/// Applications can subscribe to updates to the theme mode with [EnableThemeModeUpdates] and
+/// unsubscribe with [DisableThemeModeUpdates].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum ThemeMode {
+    Light,
+    Dark,
 }
 
 #[cfg(test)]

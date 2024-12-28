@@ -10,7 +10,7 @@ use winapi::{
 };
 
 #[cfg(feature = "events")]
-use crate::event::KeyboardEnhancementFlags;
+use crate::event::{KeyboardEnhancementFlags, ThemeMode};
 use crate::{
     cursor,
     terminal::{ClearType, WindowSize},
@@ -83,6 +83,14 @@ pub fn supports_keyboard_enhancement() -> std::io::Result<bool> {
 /// This always returns `Ok(None)` on Windows.
 #[cfg(feature = "events")]
 pub fn query_keyboard_enhancement_flags() -> io::Result<Option<KeyboardEnhancementFlags>> {
+    Ok(None)
+}
+
+/// Queries the currently selected theme mode (dark/light) from the terminal.
+///
+/// This always returns `Ok(None)` on Windows.
+#[cfg(feature = "events")]
+pub fn query_terminal_theme_mode() -> io::Result<Option<ThemeMode>> {
     Ok(None)
 }
 

@@ -46,6 +46,25 @@ impl Filter for PrimaryDeviceAttributesFilter {
     }
 }
 
+#[cfg(unix)]
+#[derive(Debug, Clone)]
+pub(crate) struct ThemeModeFilter;
+
+#[cfg(unix)]
+impl Filter for ThemeModeFilter {
+    fn eval(&self, event: &InternalEvent) -> bool {
+        use crate::event::Event;
+        // See `KeyboardEnhancementFlagsFilter` above: `PrimaryDeviceAttributes` is
+        // used to elicit a response from the terminal even if it doesn't support the
+        // theme mode query.
+        matches!(
+            *event,
+            InternalEvent::Event(Event::ThemeModeChanged(_))
+                | InternalEvent::PrimaryDeviceAttributes
+        )
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct EventFilter;
 

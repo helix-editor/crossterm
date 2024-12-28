@@ -1,7 +1,7 @@
 //! UNIX related logic for terminal manipulation.
 
 #[cfg(feature = "events")]
-use crate::event::KeyboardEnhancementFlags;
+use crate::event::{KeyboardEnhancementFlags, ThemeMode};
 use crate::terminal::{
     sys::file_descriptor::{tty_fd, FileDesc},
     WindowSize,
@@ -178,6 +178,71 @@ fn get_terminal_attr(fd: impl AsFd) -> io::Result<Termios> {
 fn set_terminal_attr(fd: impl AsFd, termios: &Termios) -> io::Result<()> {
     rustix::termios::tcsetattr(fd, rustix::termios::OptionalActions::Now, termios)?;
     Ok(())
+}
+
+/// Queries the currently selected theme mode (dark/light) from the terminal.
+///
+/// On unix systems, this function will block and possibly time out while
+/// [`crossterm::event::read`](crate::event::read) or [`crossterm::event::poll`](crate::event::poll) are being called.
+#[cfg(feature = "events")]
+pub fn query_terminal_theme_mode() -> io::Result<Option<ThemeMode>> {
+    if is_raw_mode_enabled() {
+        query_terminal_theme_mode_raw()
+    } else {
+        query_terminal_theme_mode_nonraw()
+    }
+}
+
+#[cfg(feature = "events")]
+fn query_terminal_theme_mode_nonraw() -> io::Result<Option<ThemeMode>> {
+    enable_raw_mode()?;
+    let theme_mode = query_terminal_theme_mode_raw();
+    disable_raw_mode()?;
+    theme_mode
+}
+
+#[cfg(feature = "events")]
+fn query_terminal_theme_mode_raw() -> io::Result<Option<ThemeMode>> {
+    use crate::event::{
+        filter::{PrimaryDeviceAttributesFilter, ThemeModeFilter},
+        poll_internal, read_internal, Event, InternalEvent,
+    };
+    use std::io::Write;
+    use std::time::Duration;
+
+    // ESC [ ? 996 n         Query current terminal theme mode
+    // ESC [ c               Query primary device attributes (widely supported)
+    const QUERY: &[u8] = b"\x1B[?996n\x1B[c";
+
+    let result = File::open("/dev/tty").and_then(|mut file| {
+        file.write_all(QUERY)?;
+        file.flush()
+    });
+    if result.is_err() {
+        let mut stdout = io::stdout();
+        stdout.write_all(QUERY)?;
+        stdout.flush()?;
+    }
+
+    loop {
+        match poll_internal(Some(Duration::from_millis(2000)), &ThemeModeFilter) {
+            Ok(true) => match read_internal(&ThemeModeFilter) {
+                Ok(InternalEvent::Event(Event::ThemeModeChanged(theme_mode))) => {
+                    // Flush the PrimaryDeviceAttributes out of the event queue.
+                    read_internal(&PrimaryDeviceAttributesFilter).ok();
+                    return Ok(Some(theme_mode));
+                }
+                _ => return Ok(None),
+            },
+            Ok(false) => {
+                return Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    "The theme mode could not be read in a normal duration",
+                ));
+            }
+            Err(_) => {}
+        }
+    }
 }
 
 /// Queries the terminal's support for progressive keyboard enhancement.

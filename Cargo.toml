@@ -1,10 +1,15 @@
 [package]
-name = "crossterm"
+name = "helix-crossterm"
 version = "0.28.1"
-authors = ["T. Post"]
+authors = [
+  # Original author
+  "T. Post",
+  # After forking:
+  "helix-crossterm contributors",
+]
 description = "A crossplatform terminal library for manipulating terminals."
-repository = "https://github.com/crossterm-rs/crossterm"
-documentation = "https://docs.rs/crossterm/"
+repository = "https://github.com/helix-editor/crossterm"
+documentation = "https://docs.rs/helix-crossterm/"
 license = "MIT"
 keywords = ["event", "color", "cli", "input", "terminal"]
 exclude = ["target", "Cargo.lock"]

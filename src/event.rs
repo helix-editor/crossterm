@@ -126,6 +126,7 @@ pub(crate) mod stream;
 pub(crate) mod sys;
 pub(crate) mod timeout;
 
+#[cfg(feature = "derive-more")]
 use derive_more::derive::IsVariant;
 #[cfg(feature = "event-stream")]
 pub use stream::EventStream;
@@ -543,8 +544,9 @@ impl Command for PopKeyboardEnhancementFlags {
 
 /// Represents an event.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "derive-more", derive(IsVariant))]
 #[cfg_attr(not(feature = "bracketed-paste"), derive(Copy))]
-#[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Hash, IsVariant)]
+#[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Hash)]
 pub enum Event {
     /// The terminal gained focus
     FocusGained,
@@ -672,7 +674,7 @@ impl Event {
     #[inline]
     pub fn as_key_release_event(&self) -> Option<KeyEvent> {
         match self {
-            Event::Key(event) if event.kind == KeyEventKind::Release => Some(*event),
+            Event::Key(event) if self.is_key_release() => Some(*event),
             _ => None,
         }
     }
@@ -681,7 +683,7 @@ impl Event {
     #[inline]
     pub fn as_key_repeat_event(&self) -> Option<KeyEvent> {
         match self {
-            Event::Key(event) if event.kind == KeyEventKind::Repeat => Some(*event),
+            Event::Key(event) if self.is_key_repeat() => Some(*event),
             _ => None,
         }
     }
@@ -793,7 +795,8 @@ pub struct MouseEvent {
 /// `MouseEventKind::Up` and `MouseEventKind::Drag` events. `MouseButton::Left`
 /// is returned if we don't know which button was used.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy, Hash, IsVariant)]
+#[cfg_attr(feature = "derive-more", derive(IsVariant))]
+#[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum MouseEventKind {
     /// Pressed mouse button. Contains the button that was pressed.
     Down(MouseButton),
@@ -815,7 +818,8 @@ pub enum MouseEventKind {
 
 /// Represents a mouse button.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy, Hash, IsVariant)]
+#[cfg_attr(feature = "derive-more", derive(IsVariant))]
+#[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum MouseButton {
     /// Left mouse button.
     Left,
@@ -866,8 +870,9 @@ impl Display for KeyModifiers {
         for modifier in self.iter() {
             if !first {
                 f.write_str("+")?;
-                first = false;
             }
+
+            first = false;
             match modifier {
                 KeyModifiers::SHIFT => f.write_str("Shift")?,
                 #[cfg(unix)]
@@ -895,7 +900,8 @@ impl Display for KeyModifiers {
 
 /// Represents a keyboard event kind.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy, Hash, IsVariant)]
+#[cfg_attr(feature = "derive-more", derive(IsVariant))]
+#[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum KeyEventKind {
     Press,
     Repeat,
@@ -1002,17 +1008,17 @@ impl KeyEvent {
 
     /// Returns whether the key event is a press event.
     pub fn is_press(&self) -> bool {
-        self.kind.is_press()
+        matches!(self.kind, KeyEventKind::Press)
     }
 
     /// Returns whether the key event is a release event.
     pub fn is_release(&self) -> bool {
-        self.kind.is_release()
+        matches!(self.kind, KeyEventKind::Release)
     }
 
     /// Returns whether the key event is a repeat event.
     pub fn is_repeat(&self) -> bool {
-        self.kind.is_repeat()
+        matches!(self.kind, KeyEventKind::Repeat)
     }
 }
 
@@ -1214,7 +1220,8 @@ impl Display for ModifierKeyCode {
 }
 
 /// Represents a key.
-#[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy, Hash, IsVariant)]
+#[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy, Hash)]
+#[cfg_attr(feature = "derive-more", derive(IsVariant))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum KeyCode {
     /// Backspace key (Delete on macOS, Backspace on other platforms).
@@ -1248,12 +1255,12 @@ pub enum KeyCode {
     /// F key.
     ///
     /// `KeyCode::F(1)` represents F1 key, etc.
-    #[is_variant(ignore)]
+    #[cfg_attr(feature = "derive-more", is_variant(ignore))]
     F(u8),
     /// A character.
     ///
     /// `KeyCode::Char('c')` represents `c` character, etc.
-    #[is_variant(ignore)]
+    #[cfg_attr(feature = "derive-more", is_variant(ignore))]
     Char(char),
     /// Null.
     Null,
@@ -1306,7 +1313,7 @@ pub enum KeyCode {
     /// **Note:** these keys can only be read if
     /// [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`] has been enabled with
     /// [`PushKeyboardEnhancementFlags`].
-    #[is_variant(ignore)]
+    #[cfg_attr(feature = "derive-more", is_variant(ignore))]
     Media(MediaKeyCode),
     /// A modifier key.
     ///
@@ -1314,7 +1321,7 @@ pub enum KeyCode {
     /// [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`] and
     /// [`KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES`] have been enabled with
     /// [`PushKeyboardEnhancementFlags`].
-    #[is_variant(ignore)]
+    #[cfg_attr(feature = "derive-more", is_variant(ignore))]
     Modifier(ModifierKeyCode),
 }
 
@@ -1619,6 +1626,20 @@ mod tests {
         assert_eq!(format!("{}", Modifier(RightSuper)), "Right Super");
     }
 
+    #[test]
+    fn key_modifiers_display() {
+        let modifiers = KeyModifiers::SHIFT | KeyModifiers::CONTROL | KeyModifiers::ALT;
+
+        #[cfg(target_os = "macos")]
+        assert_eq!(modifiers.to_string(), "Shift+Control+Option");
+
+        #[cfg(target_os = "windows")]
+        assert_eq!(modifiers.to_string(), "Shift+Ctrl+Alt");
+
+        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+        assert_eq!(modifiers.to_string(), "Shift+Control+Alt");
+    }
+
     const ESC_PRESSED: KeyEvent =
         KeyEvent::new_with_kind(KeyCode::Esc, KeyModifiers::empty(), KeyEventKind::Press);
     const ESC_RELEASED: KeyEvent =
@@ -1632,6 +1653,7 @@ mod tests {
         modifiers: KeyModifiers::empty(),
     };
 
+    #[cfg(feature = "derive-more")]
     #[test]
     fn event_is() {
         let event = Event::FocusGained;

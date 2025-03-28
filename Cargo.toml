@@ -55,7 +55,6 @@ derive-more = ["dep:derive_more"]
 [dependencies]
 bitflags = { version = "2.3" }
 derive_more = { version = "1.0.0", features = ["is_variant"], optional = true }
-document-features = "0.2.10"
 futures-core = { version = "0.3", optional = true, default-features = false }
 parking_lot = "0.12"
 serde = { version = "1.0", features = ["derive"], optional = true }

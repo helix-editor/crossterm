@@ -312,6 +312,26 @@ bitflags! {
     }
 }
 
+/// The terminal's current mode of the synchronized output feature.
+///
+/// <https://gist.github.com/christianparpart/d8a62cc1ab659194337d73e399004036#feature-detection>
+#[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum SynchronizedOutputMode {
+    /// Screen updates are not shown to the user until mode is disabled.
+    Set,
+    /// Screen updates are shown as usual (e.g. as soon as they arrive).
+    Reset,
+    /// The terminal does not support synchronized output sequences.
+    NotSupported,
+}
+
+impl Default for SynchronizedOutputMode {
+    fn default() -> Self {
+        Self::NotSupported
+    }
+}
+
 /// A command that enables mouse event capturing.
 ///
 /// Mouse events can be captured with [read](./fn.read.html)/[poll](./fn.poll.html).
@@ -1538,6 +1558,9 @@ pub(crate) enum InternalEvent {
     /// The progressive keyboard enhancement flags enabled by the terminal.
     #[cfg(unix)]
     KeyboardEnhancementFlags(KeyboardEnhancementFlags),
+    /// The terminal's current mode of the synchronized output feature.
+    #[cfg(unix)]
+    SynchronizedOutputMode(SynchronizedOutputMode),
     /// Attributes and architectural class of the terminal.
     #[cfg(unix)]
     PrimaryDeviceAttributes,

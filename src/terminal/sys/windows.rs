@@ -70,6 +70,14 @@ pub(crate) fn window_size() -> io::Result<WindowSize> {
     ))
 }
 
+/// Queries the terminal's support for synchronized output sequences.
+///
+/// This always returns `Ok(false)` on Windows.
+#[cfg(feature = "events")]
+pub fn supports_synchronized_output() -> io::Result<bool> {
+    Ok(false)
+}
+
 /// Queries the terminal's support for progressive keyboard enhancement.
 ///
 /// This always returns `Ok(false)` on Windows.

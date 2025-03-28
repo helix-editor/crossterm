@@ -65,6 +65,23 @@ impl Filter for ThemeModeFilter {
     }
 }
 
+#[cfg(unix)]
+#[derive(Debug, Clone)]
+pub(crate) struct SynchronizedOutputModeFilter;
+
+#[cfg(unix)]
+impl Filter for SynchronizedOutputModeFilter {
+    fn eval(&self, event: &InternalEvent) -> bool {
+        // See `KeyboardEnhancementFlagsFilter` above: `PrimaryDeviceAttributes` is
+        // used to elicit a response from the terminal even if it doesn't support the
+        // synchronized output mode query.
+        matches!(
+            *event,
+            InternalEvent::SynchronizedOutputMode(_) | InternalEvent::PrimaryDeviceAttributes
+        )
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct EventFilter;
 

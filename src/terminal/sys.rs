@@ -8,6 +8,7 @@ pub(crate) use self::unix::{
 #[cfg(feature = "events")]
 pub use self::unix::{
     query_keyboard_enhancement_flags, query_terminal_theme_mode, supports_keyboard_enhancement,
+    supports_synchronized_output,
 };
 #[cfg(all(windows, test))]
 pub(crate) use self::windows::temp_screen_buffer;
@@ -20,6 +21,7 @@ pub(crate) use self::windows::{
 #[cfg(feature = "events")]
 pub use self::windows::{
     query_keyboard_enhancement_flags, query_terminal_theme_mode, supports_keyboard_enhancement,
+    supports_synchronized_output,
 };
 
 #[cfg(windows)]

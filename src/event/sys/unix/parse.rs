@@ -2,7 +2,8 @@ use std::io;
 
 use crate::event::{
     Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers, KeyboardEnhancementFlags,
-    MediaKeyCode, ModifierKeyCode, MouseButton, MouseEvent, MouseEventKind, ThemeMode,
+    MediaKeyCode, ModifierKeyCode, MouseButton, MouseEvent, MouseEventKind, SynchronizedOutputMode,
+    ThemeMode,
 };
 
 use super::super::super::InternalEvent;
@@ -181,6 +182,7 @@ pub(crate) fn parse_csi(buffer: &[u8]) -> io::Result<Option<InternalEvent>> {
             b'u' => return parse_csi_keyboard_enhancement_flags(buffer),
             b'c' => return parse_csi_primary_device_attributes(buffer),
             b'n' => return parse_csi_theme_mode(buffer),
+            b'y' => return parse_csi_synchronized_output_mode(buffer),
             _ => None,
         },
         b'0'..=b'9' => {
@@ -325,6 +327,36 @@ fn parse_csi_theme_mode(buffer: &[u8]) -> io::Result<Option<InternalEvent>> {
     Ok(Some(InternalEvent::Event(Event::ThemeModeChanged(
         theme_mode,
     ))))
+}
+
+fn parse_csi_synchronized_output_mode(buffer: &[u8]) -> io::Result<Option<InternalEvent>> {
+    // ESC [ ? 2026 ; 0 $ y
+    assert!(buffer.starts_with(b"\x1B[?"));
+    assert!(buffer.ends_with(b"y"));
+
+    let s = std::str::from_utf8(&buffer[3..buffer.len() - 1])
+        .map_err(|_| could_not_parse_event_error())?;
+    let s = match s.strip_suffix('$') {
+        Some(s) => s,
+        None => return Ok(None),
+    };
+
+    let mut split = s.split(';');
+
+    if next_parsed::<u16>(&mut split)? != 2026 {
+        return Ok(None);
+    }
+
+    let synchronized_output_mode = match next_parsed::<u8>(&mut split)? {
+        1 => SynchronizedOutputMode::Set,
+        2 => SynchronizedOutputMode::Reset,
+        0 | 4 => SynchronizedOutputMode::NotSupported,
+        _ => return Ok(None),
+    };
+
+    Ok(Some(InternalEvent::SynchronizedOutputMode(
+        synchronized_output_mode,
+    )))
 }
 
 fn parse_modifiers(mask: u8) -> KeyModifiers {

@@ -245,6 +245,76 @@ fn query_terminal_theme_mode_raw() -> io::Result<Option<ThemeMode>> {
     }
 }
 
+#[cfg(feature = "events")]
+fn supports_synchronized_output_raw() -> io::Result<bool> {
+    use crate::event::{
+        filter::{PrimaryDeviceAttributesFilter, SynchronizedOutputModeFilter},
+        poll_internal, read_internal, InternalEvent, SynchronizedOutputMode,
+    };
+    use std::io::Write;
+    use std::time::Duration;
+
+    // ESC [ ? 2026 $ p      DECRQM request for synchronized output state
+    // ESC [ c               Query primary device attributes (widely supported)
+    const QUERY: &[u8] = b"\x1B[?2026$p\x1B[c";
+
+    let result = File::open("/dev/tty").and_then(|mut file| {
+        file.write_all(QUERY)?;
+        file.flush()
+    });
+    if result.is_err() {
+        let mut stdout = io::stdout();
+        stdout.write_all(QUERY)?;
+        stdout.flush()?;
+    }
+
+    loop {
+        match poll_internal(
+            Some(Duration::from_millis(2000)),
+            &SynchronizedOutputModeFilter,
+        ) {
+            Ok(true) => match read_internal(&SynchronizedOutputModeFilter) {
+                Ok(InternalEvent::SynchronizedOutputMode(
+                    SynchronizedOutputMode::Set | SynchronizedOutputMode::Reset,
+                )) => {
+                    // Flush the PrimaryDeviceAttributes out of the event queue.
+                    read_internal(&PrimaryDeviceAttributesFilter).ok();
+                    return Ok(true);
+                }
+                _ => return Ok(false),
+            },
+            Ok(false) => {
+                return Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    "Synchronized output mode could not be read in a normal duration",
+                ));
+            }
+            Err(_) => {}
+        }
+    }
+}
+
+#[cfg(feature = "events")]
+fn supports_synchronized_output_nonraw() -> io::Result<bool> {
+    enable_raw_mode()?;
+    let is_supported = supports_synchronized_output_raw();
+    disable_raw_mode()?;
+    is_supported
+}
+
+/// Queries the terminal's support for synchronized output sequences.
+///
+/// On unix systems, this function will block and possibly time out while
+/// [`crossterm::event::read`](crate::event::read) or [`crossterm::event::poll`](crate::event::poll) are being called.
+#[cfg(feature = "events")]
+pub fn supports_synchronized_output() -> io::Result<bool> {
+    if is_raw_mode_enabled() {
+        supports_synchronized_output_raw()
+    } else {
+        supports_synchronized_output_nonraw()
+    }
+}
+
 /// Queries the terminal's support for progressive keyboard enhancement.
 ///
 /// On unix systems, this function will block and possibly time out while

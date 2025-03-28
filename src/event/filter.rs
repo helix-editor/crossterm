@@ -82,6 +82,27 @@ impl Filter for SynchronizedOutputModeFilter {
     }
 }
 
+#[cfg(unix)]
+#[derive(Debug, Clone)]
+pub(crate) struct TerminalFeaturesFilter;
+
+#[cfg(unix)]
+impl Filter for TerminalFeaturesFilter {
+    fn eval(&self, event: &InternalEvent) -> bool {
+        use crate::event::Event;
+        // See `KeyboardEnhancementFlagsFilter` above: `PrimaryDeviceAttributes` is
+        // used to elicit a response from the terminal even if it doesn't support the
+        // synchronized output mode query.
+        matches!(
+            *event,
+            InternalEvent::KeyboardEnhancementFlags(_)
+                | InternalEvent::Event(Event::ThemeModeChanged(_))
+                | InternalEvent::SynchronizedOutputMode(_)
+                | InternalEvent::PrimaryDeviceAttributes
+        )
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct EventFilter;
 

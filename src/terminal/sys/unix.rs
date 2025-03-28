@@ -1,7 +1,7 @@
 //! UNIX related logic for terminal manipulation.
 
 #[cfg(feature = "events")]
-use crate::event::{KeyboardEnhancementFlags, ThemeMode};
+use crate::event::{KeyboardEnhancementFlags, TerminalFeatures, ThemeMode};
 use crate::terminal::{
     sys::file_descriptor::{tty_fd, FileDesc},
     WindowSize,
@@ -394,6 +394,77 @@ fn query_keyboard_enhancement_flags_raw() -> io::Result<Option<KeyboardEnhanceme
                 return Err(io::Error::new(
                     io::ErrorKind::Other,
                     "The keyboard enhancement status could not be read within a normal duration",
+                ));
+            }
+            Err(_) => {}
+        }
+    }
+}
+
+/// Queries information about features that the terminal supports.
+///
+/// On unix systems, this function will block and possibly time out while
+/// [`crossterm::event::read`](crate::event::read) or [`crossterm::event::poll`](crate::event::poll) are being called.
+#[cfg(feature = "events")]
+pub fn terminal_features() -> io::Result<TerminalFeatures> {
+    if is_raw_mode_enabled() {
+        terminal_features_raw()
+    } else {
+        terminal_features_nonraw()
+    }
+}
+
+#[cfg(feature = "events")]
+fn terminal_features_nonraw() -> io::Result<TerminalFeatures> {
+    enable_raw_mode()?;
+    let features = terminal_features_raw();
+    disable_raw_mode()?;
+    features
+}
+
+#[cfg(feature = "events")]
+fn terminal_features_raw() -> io::Result<TerminalFeatures> {
+    use crate::event::{
+        filter::TerminalFeaturesFilter, poll_internal, read_internal, Event, InternalEvent,
+    };
+    use std::io::Write;
+    use std::time::Duration;
+
+    // ESC [ ? u             Query progressive keyboard enhancement flags (kitty protocol).
+    // ESC [ ? 2026 $ p      DECRQM request for synchronized output state
+    // ESC [ ? 996 n         Query current terminal theme mode
+    // ESC [ c               Query primary device attributes.
+    const QUERY: &[u8] = b"\x1B[?u\x1B[?2026$p\x1B[?996n\x1B[c";
+
+    let result = File::open("/dev/tty").and_then(|mut file| {
+        file.write_all(QUERY)?;
+        file.flush()
+    });
+    if result.is_err() {
+        let mut stdout = io::stdout();
+        stdout.write_all(QUERY)?;
+        stdout.flush()?;
+    }
+
+    let mut features = TerminalFeatures::default();
+    loop {
+        match poll_internal(Some(Duration::from_millis(2000)), &TerminalFeaturesFilter) {
+            Ok(true) => match read_internal(&TerminalFeaturesFilter) {
+                Ok(InternalEvent::KeyboardEnhancementFlags(flags)) => {
+                    features.keyboard_enhancement_flags = Some(flags);
+                }
+                Ok(InternalEvent::SynchronizedOutputMode(mode)) => {
+                    features.synchronized_output_mode = mode;
+                }
+                Ok(InternalEvent::Event(Event::ThemeModeChanged(theme_mode))) => {
+                    features.theme_mode = Some(theme_mode);
+                }
+                _ => return Ok(features),
+            },
+            Ok(false) => {
+                return Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    "Terminal information could not be read within a normal duration",
                 ));
             }
             Err(_) => {}

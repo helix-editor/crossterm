@@ -10,7 +10,7 @@ use winapi::{
 };
 
 #[cfg(feature = "events")]
-use crate::event::{KeyboardEnhancementFlags, ThemeMode};
+use crate::event::{KeyboardEnhancementFlags, TerminalFeatures, ThemeMode};
 use crate::{
     cursor,
     terminal::{ClearType, WindowSize},
@@ -100,6 +100,11 @@ pub fn query_keyboard_enhancement_flags() -> io::Result<Option<KeyboardEnhanceme
 #[cfg(feature = "events")]
 pub fn query_terminal_theme_mode() -> io::Result<Option<ThemeMode>> {
     Ok(None)
+}
+
+#[cfg(feature = "events")]
+pub fn terminal_features() -> io::Result<TerminalFeatures> {
+    Ok(TerminalFeatures::default())
 }
 
 pub(crate) fn clear(clear_type: ClearType) -> std::io::Result<()> {

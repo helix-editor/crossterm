@@ -1579,6 +1579,17 @@ pub enum ThemeMode {
     Dark,
 }
 
+/// The current state of features supported by the terminal.
+///
+/// This can be queried with [terminal::terminal_features].
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct TerminalFeatures {
+    pub keyboard_enhancement_flags: Option<KeyboardEnhancementFlags>,
+    pub synchronized_output_mode: SynchronizedOutputMode,
+    pub theme_mode: Option<ThemeMode>,
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::hash_map::DefaultHasher;

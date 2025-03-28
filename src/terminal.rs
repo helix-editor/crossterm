@@ -101,7 +101,7 @@ pub(crate) mod sys;
 #[cfg(feature = "events")]
 pub use sys::{
     query_keyboard_enhancement_flags, query_terminal_theme_mode, supports_keyboard_enhancement,
-    supports_synchronized_output,
+    supports_synchronized_output, terminal_features,
 };
 
 /// Tells whether the raw mode is enabled.

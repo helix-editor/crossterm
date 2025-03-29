@@ -2,6 +2,9 @@
 
 //! # Cross-platform Terminal Manipulation Library
 //!
+//! > This crate is a soft fork of the upstream [Crossterm](https://docs.rs/crossterm/latest/crossterm/) crate meant for use in the [Helix editor](https://github.com/helix-editor/helix).
+//! > Instead of using this crate you most likely want to use upstream Crossterm.
+//!
 //! Crossterm is a pure-rust, terminal manipulation library that makes it possible to write cross-platform text-based interfaces.
 //!
 //! This crate supports all UNIX and Windows terminals down to Windows 7 (not all terminals are tested

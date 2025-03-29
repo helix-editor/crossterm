@@ -1,6 +1,6 @@
 [package]
 name = "helix-crossterm"
-version = "0.28.1"
+version = "0.1.0-beta.1"
 authors = [
   # Original author
   "T. Post",

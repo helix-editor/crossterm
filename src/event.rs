@@ -521,17 +521,12 @@ impl Command for PushKeyboardEnhancementFlags {
 
     #[cfg(windows)]
     fn execute_winapi(&self) -> std::io::Result<()> {
-        use std::io;
-
-        Err(io::Error::new(
-            io::ErrorKind::Unsupported,
-            "Keyboard progressive enhancement not implemented for the legacy Windows API.",
-        ))
+        Ok(())
     }
 
     #[cfg(windows)]
     fn is_ansi_code_supported(&self) -> bool {
-        false
+        true
     }
 }
 
@@ -550,17 +545,12 @@ impl Command for PopKeyboardEnhancementFlags {
 
     #[cfg(windows)]
     fn execute_winapi(&self) -> std::io::Result<()> {
-        use std::io;
-
-        Err(io::Error::new(
-            io::ErrorKind::Unsupported,
-            "Keyboard progressive enhancement not implemented for the legacy Windows API.",
-        ))
+        Ok(())
     }
 
     #[cfg(windows)]
     fn is_ansi_code_supported(&self) -> bool {
-        false
+        true
     }
 }
 
@@ -577,17 +567,12 @@ impl Command for EnableThemeModeUpdates {
 
     #[cfg(windows)]
     fn execute_winapi(&self) -> std::io::Result<()> {
-        use std::io;
-
-        Err(io::Error::new(
-            io::ErrorKind::Unsupported,
-            "Theme mode updates are not implemented for the legacy Windows API",
-        ))
+        Ok(())
     }
 
     #[cfg(windows)]
     fn is_ansi_code_supported(&self) -> bool {
-        false
+        true
     }
 }
 
@@ -604,17 +589,12 @@ impl Command for DisableThemeModeUpdates {
 
     #[cfg(windows)]
     fn execute_winapi(&self) -> std::io::Result<()> {
-        use std::io;
-
-        Err(io::Error::new(
-            io::ErrorKind::Unsupported,
-            "Theme mode updates are not implemented for the legacy Windows API",
-        ))
+        Ok(())
     }
 
     #[cfg(windows)]
     fn is_ansi_code_supported(&self) -> bool {
-        false
+        true
     }
 }
 
